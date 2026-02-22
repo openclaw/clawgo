@@ -108,3 +108,45 @@ func TestDefaultPolicyVoiceTranscript(t *testing.T) {
 		t.Fatalf("unexpected fallback sends")
 	}
 }
+
+func TestDefaultPolicyEmptyTranscript(t *testing.T) {
+	transport := &fakeTransport{}
+	cfg := routing.Config{SessionKey: "main"}
+	policy, err := New(cfg, transport, func(string, ...any) {})
+	if err != nil {
+		t.Fatalf("new policy: %v", err)
+	}
+	handled, err := policy.HandleTranscript(context.Background(), "   ")
+	if err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+	if handled {
+		t.Fatalf("expected not handled for empty transcript")
+	}
+	if len(transport.voice) != 0 || len(transport.agent) != 0 || len(transport.provider) != 0 {
+		t.Fatalf("expected no sends for empty transcript")
+	}
+}
+
+func TestDefaultPolicyQuickActionWithoutTelegramConfig(t *testing.T) {
+	transport := &fakeTransport{}
+	cfg := routing.Config{
+		QuickActions:   true,
+		DeliverChannel: "",
+		DeliverTo:      "",
+	}
+	policy, err := New(cfg, transport, func(string, ...any) {})
+	if err != nil {
+		t.Fatalf("new policy: %v", err)
+	}
+	handled, err := policy.HandleTranscript(context.Background(), "please ping telegram")
+	if err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+	if !handled {
+		t.Fatalf("expected handled")
+	}
+	if len(transport.provider) != 0 || len(transport.voice) != 0 || len(transport.agent) != 0 {
+		t.Fatalf("expected quick action to short-circuit without sends when telegram is not configured")
+	}
+}
