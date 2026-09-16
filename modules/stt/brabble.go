@@ -35,31 +35,49 @@ func (e *BrabbleEngine) Transcribe(ctx context.Context, _ <-chan audio.Frame, _ 
 	if cmdPath == "" {
 		cmdPath = "brabble"
 	}
+	ctx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(ctx, cmdPath, e.cfg.Args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	if err := cmd.Start(); err != nil {
+		cancel()
 		return nil, err
 	}
+	stopClosing := context.AfterFunc(ctx, func() {
+		_ = stdout.Close()
+		_ = stderr.Close()
+	})
 	out := make(chan Transcript, 32)
+	stderrDone := make(chan struct{})
+	go func() {
+		defer close(stderrDone)
+		e.logLines(ctx, stderr)
+	}()
 	go func() {
 		defer close(out)
-		e.readLines(ctx, stdout, out)
-	}()
-	go e.logLines(ctx, stderr)
-	go func() {
-		_ = cmd.Wait()
+		defer cancel()
+		defer stopClosing()
+		if err := e.readLines(ctx, stdout, out); err != nil {
+			cancel()
+		}
+		<-stderrDone
+		// Wait closes the pipes, so both readers must finish first.
+		if err := cmd.Wait(); err != nil && ctx.Err() == nil && e.logf != nil {
+			e.logf("brabble exited: %v", err)
+		}
 	}()
 	return out, nil
 }
 
-func (e *BrabbleEngine) readLines(ctx context.Context, r io.Reader, out chan<- Transcript) {
+func (e *BrabbleEngine) readLines(ctx context.Context, r io.Reader, out chan<- Transcript) error {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 8*1024*1024)
 	for scanner.Scan() {
@@ -74,19 +92,22 @@ func (e *BrabbleEngine) readLines(ctx context.Context, r io.Reader, out chan<- T
 		select {
 		case out <- tr:
 		case <-ctx.Done():
-			return
+			return ctx.Err()
 		}
 	}
-	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) && e.logf != nil {
+	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) && ctx.Err() == nil && e.logf != nil {
 		e.logf("brabble read error: %v", err)
 	}
+	return scanner.Err()
 }
 
 func (e *BrabbleEngine) logLines(ctx context.Context, r io.Reader) {
 	if e.logf == nil {
+		_, _ = io.Copy(io.Discard, r)
 		return
 	}
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), 8*1024*1024)
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
@@ -98,6 +119,11 @@ func (e *BrabbleEngine) logLines(ctx context.Context, r io.Reader) {
 			continue
 		}
 		e.logf("brabble: %s", line)
+	}
+	if err := scanner.Err(); err != nil && ctx.Err() == nil {
+		e.logf("brabble stderr read error: %v", err)
+		// Keep draining even when a diagnostic exceeds the line limit.
+		_, _ = io.Copy(io.Discard, r)
 	}
 }
 

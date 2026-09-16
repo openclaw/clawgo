@@ -103,3 +103,4 @@ Override to `_clawdbot-bridge._tcp` if you intentionally want it to show up as a
 - Node state (`nodeId` + token) lives in `~/.clawdbot/clawgo.json`.
 - Caps default to `voiceWake`; override via `-caps` if you expose more commands.
 - Set `bridge.bind: "tailnet"` on the gateway to restrict the bridge to Tailscale.
+- Brabble output is drained before its transcript stream closes; stderr diagnostics cannot block recognition when logging is disabled or a diagnostic line is oversized. Nonzero process exits are logged.
