@@ -66,7 +66,7 @@ printf hey computer turn on the lights
  > /tmp/voice.fifo
 ```
 
-Each line on the FIFO becomes a `voice.transcript`; chat responses from the `main` session are spoken via `espeak-ng`.
+Each line on the FIFO becomes a `voice.transcript`; chat responses from the outgoing session (`main` by default) are spoken via `espeak-ng`. Set `-chat-session-key` to subscribe to a different session explicitly.
 
 A bridge disconnect or node shutdown cancels pending and active speech. Custom TTS wrappers should use `exec` to run their speech command so cancellation reaches it.
 

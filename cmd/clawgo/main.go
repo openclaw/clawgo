@@ -127,7 +127,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  -permissions     Comma-separated permission keys to advertise (true)")
 	fmt.Fprintln(os.Stderr, "  -pair-silent     Request silent pairing (if supported by gateway)")
 	fmt.Fprintln(os.Stderr, "  -session-key     Session key for voice.transcript (default main)")
-	fmt.Fprintln(os.Stderr, "  -chat-session-key Session key for chat.subscribe (default main)")
+	fmt.Fprintln(os.Stderr, "  -chat-session-key Session key for chat.subscribe (default mirrors -session-key)")
 	fmt.Fprintln(os.Stderr, "  -chat-subscribe  Subscribe to chat stream for TTS (default true)")
 	fmt.Fprintln(os.Stderr, "  -agent-request   Send agent.request instead of voice.transcript")
 	fmt.Fprintln(os.Stderr, "  -deliver         Deliver agent response to a channel")
@@ -167,7 +167,7 @@ func parseFlags(cmd string, args []string) NodeConfig {
 	permissions := fs.String("permissions", "", "comma-separated permission keys")
 	pairSilent := fs.Bool("pair-silent", false, "request silent pairing")
 	sessionKey := fs.String("session-key", "main", "session key for voice.transcript")
-	chatSessionKey := fs.String("chat-session-key", "main", "session key for chat.subscribe")
+	chatSessionKey := fs.String("chat-session-key", "", "session key for chat.subscribe (default mirrors -session-key)")
 	chatSubscribe := fs.Bool("chat-subscribe", true, "subscribe to chat events for TTS")
 	agentRequest := fs.Bool("agent-request", false, "send agent.request instead of voice.transcript")
 	deliver := fs.Bool("deliver", false, "deliver agent response to channel")
@@ -239,6 +239,9 @@ func parseFlags(cmd string, args []string) NodeConfig {
 		STTEngine:        strings.TrimSpace(*sttEngine),
 		STTCommand:       strings.TrimSpace(*sttCommand),
 		STTArgs:          strings.TrimSpace(*sttArgs),
+	}
+	if cfg.ChatSessionKey == "" {
+		cfg.ChatSessionKey = cfg.SessionKey
 	}
 	return cfg
 }
@@ -433,9 +436,6 @@ func runNode(cfg NodeConfig) error {
 		var chatHandler *ChatSubscriber
 		if cfg.ChatSubscribe {
 			sessionKey := strings.TrimSpace(cfg.ChatSessionKey)
-			if sessionKey == "" {
-				sessionKey = strings.TrimSpace(cfg.SessionKey)
-			}
 			engine, err := newNodeTTSEngine(cfg)
 			if err != nil {
 				client.logf("tts disabled: %v", err)
