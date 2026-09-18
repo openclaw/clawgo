@@ -619,10 +619,17 @@ func (c *BridgeClient) readLoop() {
 		}
 	}
 	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
-		c.errs <- err
+		c.sendErr(err)
 		return
 	}
-	c.errs <- io.EOF
+	c.sendErr(io.EOF)
+}
+
+func (c *BridgeClient) sendErr(err error) {
+	select {
+	case c.errs <- err:
+	case <-c.done:
+	}
 }
 
 func sendPairRequest(c *BridgeClient, cfg NodeConfig, state *NodeState) error {
