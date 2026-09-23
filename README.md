@@ -26,7 +26,7 @@ GOOS=linux GOARCH=arm64 go build -o /tmp/clawgo-linux-arm64 ./cmd/clawgo
 | `-session-key` | Session for outgoing `voice.transcript` events (default `main`). |
 | `-chat-session-key` | Session to subscribe for chat replies (default mirrors `-session-key`). |
 | `-chat-subscribe` | Enable chat stream+TTS (default `true`). |
-| `-tts-engine` | `system`, `piper`, `elevenlabs`, or `none` (system = `espeak-ng`). |
+| `-tts-engine` | `system` or `none` (system = `espeak-ng`). |
 | `-tts-system-voice` | espeak voice id (default `en-us`). |
 | `-tts-system-command` | espeak-compatible executable; receives voice/rate options, `--`, then the utterance. |
 | `-tts-system-rate` | Speech rate (wpm). |
@@ -62,8 +62,7 @@ tail -f /tmp/voice.fifo | ./clawgo run \
   -chat-subscribe \
   -tts-engine system
 # elsewhere
-printf hey computer turn on the lights
- > /tmp/voice.fifo
+printf '%s\n' 'hey computer turn on the lights' > /tmp/voice.fifo
 ```
 
 Each line on the FIFO becomes a `voice.transcript`; chat responses from the outgoing session (`main` by default) are spoken via `espeak-ng`. Set `-chat-session-key` to subscribe to a different session explicitly.
