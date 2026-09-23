@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Prefer Go 1.27.1 for builds while retaining the Go 1.26 minimum.
 - Stop speech queues and cancel active system TTS when the bridge disconnects or the node exits. Thanks @SebTardif! (#7)
 - Forward only final speech transcripts to quick actions, voice events, and agent requests. Thanks @SebTardif! (#12)
 - Treat leading dashes in spoken text as words instead of espeak options. Thanks @SebTardif! (#11)
