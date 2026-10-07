@@ -6,7 +6,7 @@ Minimal headless node client for Raspberry Pi / Linux. Connects to the gateway b
 
 ## Build
 
-Requires Go 1.26 or newer. The preferred toolchain in `go.mod` is Go 1.27.0, which Go downloads automatically when toolchain switching is enabled; CI uses the same version.
+Requires Go 1.26 or newer. The preferred toolchain in `go.mod` is Go 1.27.1, which Go downloads automatically when toolchain switching is enabled; CI uses the same version.
 
 ```bash
 cd clawgo
