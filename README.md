@@ -30,6 +30,7 @@ GOOS=linux GOARCH=arm64 go build -o /tmp/clawgo-linux-arm64 ./cmd/clawgo
 | `-tts-system-voice` | espeak voice id (default `en-us`). |
 | `-tts-system-command` | espeak-compatible executable; receives voice/rate options, `--`, then the utterance. |
 | `-tts-system-rate` | Speech rate (wpm). |
+| `-tts-system-timeout` | Optional deadline per system TTS utterance (for example `30s`); default `0` allows unlimited playback. |
 | `-mdns-service` | Bonjour service type (default `_clawdbot-node._tcp`). |
 | `-stdin` | Read transcripts from stdin (pipe/FIFO). |
 | `-stdin-file` | Read transcripts from a FIFO/file instead of stdin. |
@@ -68,7 +69,7 @@ printf hey computer turn on the lights
 
 Each line on the FIFO becomes a `voice.transcript`; chat responses from the outgoing session (`main` by default) are spoken via `espeak-ng`. Set `-chat-session-key` to subscribe to a different session explicitly.
 
-A bridge disconnect or node shutdown cancels pending and active speech. Custom TTS wrappers should use `exec` to run their speech command so cancellation reaches it.
+A bridge disconnect or node shutdown cancels pending and active speech. Custom TTS wrappers should use `exec` to run their speech command so cancellation reaches it. Set `-tts-system-timeout` to bound a hung speech command and let the next queued utterance start; choose a duration long enough for healthy speech. The default `0` leaves long utterances uninterrupted.
 
 With `-stt-engine brabble`, only final utterances are routed or sent to the bridge; interim hypotheses do not trigger requests or quick actions.
 

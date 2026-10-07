@@ -77,6 +77,7 @@ type NodeConfig struct {
 	TTSSystemVoice   string
 	TTSSystemRate    int
 	TTSSystemCommand string
+	TTSSystemTimeout time.Duration
 	StdinPath        string
 	QuickActions     bool
 	QuickPingMessage string
@@ -137,6 +138,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  -tts-system-voice Voice id for system TTS (default en-us)")
 	fmt.Fprintln(os.Stderr, "  -tts-system-rate Speech rate for system TTS (default 180)")
 	fmt.Fprintln(os.Stderr, "  -tts-system-command Binary for system TTS (default espeak-ng)")
+	fmt.Fprintln(os.Stderr, "  -tts-system-timeout Optional deadline for one system TTS child (default 0, unlimited)")
 	fmt.Fprintln(os.Stderr, "  -stdin           Read stdin lines and send voice.transcript events")
 	fmt.Fprintln(os.Stderr, "  -stdin-file      Read lines from a file/FIFO instead of stdin")
 	fmt.Fprintln(os.Stderr, "  -ping-interval   Ping interval (default 30s)")
@@ -177,6 +179,7 @@ func parseFlags(cmd string, args []string) NodeConfig {
 	ttsSystemVoice := fs.String("tts-system-voice", "en-us", "voice id for system TTS")
 	ttsSystemRate := fs.Int("tts-system-rate", 180, "speech rate for system TTS")
 	ttsSystemCommand := fs.String("tts-system-command", "espeak-ng", "binary for system TTS")
+	ttsSystemTimeout := fs.Duration("tts-system-timeout", 0, "optional deadline for one system TTS child; 0 keeps unlimited healthy speech")
 	stdinMode := fs.Bool("stdin", false, "read stdin lines for voice.transcript")
 	stdinFile := fs.String("stdin-file", "", "read input lines from file/FIFO")
 	pingInterval := fs.Duration("ping-interval", 30*time.Second, "ping interval")
@@ -232,6 +235,7 @@ func parseFlags(cmd string, args []string) NodeConfig {
 		TTSSystemVoice:   strings.TrimSpace(*ttsSystemVoice),
 		TTSSystemRate:    *ttsSystemRate,
 		TTSSystemCommand: strings.TrimSpace(*ttsSystemCommand),
+		TTSSystemTimeout: *ttsSystemTimeout,
 		StdinPath:        strings.TrimSpace(*stdinFile),
 		QuickActions:     *quickActions,
 		QuickPingMessage: strings.TrimSpace(*quickPingMessage),
@@ -1005,9 +1009,10 @@ type systemTTSEngine struct {
 	command string
 	voice   string
 	rate    int
+	timeout time.Duration
 }
 
-func newSystemTTSEngine(cmd, voice string, rate int) (*systemTTSEngine, error) {
+func newSystemTTSEngine(cmd, voice string, rate int, timeout time.Duration) (*systemTTSEngine, error) {
 	if cmd == "" {
 		cmd = "espeak-ng"
 	}
@@ -1015,7 +1020,7 @@ func newSystemTTSEngine(cmd, voice string, rate int) (*systemTTSEngine, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &systemTTSEngine{command: resolved, voice: voice, rate: rate}, nil
+	return &systemTTSEngine{command: resolved, voice: voice, rate: rate, timeout: timeout}, nil
 }
 
 func (s *systemTTSEngine) Speak(ctx context.Context, text string) error {
@@ -1031,7 +1036,13 @@ func (s *systemTTSEngine) Speak(ctx context.Context, text string) error {
 		args = append(args, "-s", strconv.Itoa(s.rate))
 	}
 	args = append(args, "--", trimmed)
-	cmd := exec.CommandContext(ctx, s.command, args...)
+	speakCtx := ctx
+	cancel := func() {}
+	if s.timeout > 0 {
+		speakCtx, cancel = context.WithTimeout(ctx, s.timeout)
+	}
+	defer cancel()
+	cmd := exec.CommandContext(speakCtx, s.command, args...)
 	cmd.WaitDelay = 2 * time.Second
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
@@ -1043,7 +1054,7 @@ func newNodeTTSEngine(cfg NodeConfig) (TTSEngine, error) {
 	case "", "none":
 		return nil, nil
 	case "system":
-		return newSystemTTSEngine(cfg.TTSSystemCommand, cfg.TTSSystemVoice, cfg.TTSSystemRate)
+		return newSystemTTSEngine(cfg.TTSSystemCommand, cfg.TTSSystemVoice, cfg.TTSSystemRate, cfg.TTSSystemTimeout)
 	default:
 		return nil, fmt.Errorf("unsupported tts engine: %s", cfg.TTSEngine)
 	}

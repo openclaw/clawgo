@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add an opt-in `-tts-system-timeout` to recover the speech queue from a hung system TTS child while preserving unlimited playback by default. Thanks @SebTardif! (#10)
 - Deliver buffered bridge frames before reporting disconnects, preventing lost pairing and hello replies, and let bridge readers exit without an error consumer. Thanks @SebTardif! (#9)
 - Stop speech queues and cancel active system TTS when the bridge disconnects or the node exits. Thanks @SebTardif! (#7)
 - Forward only final speech transcripts to quick actions, voice events, and agent requests. Thanks @SebTardif! (#12)
