@@ -39,7 +39,7 @@ func TestTTSQueueStopCancelsActiveSpeech(t *testing.T) {
 	if err := os.WriteFile(script, []byte("#!/bin/sh\necho started >> "+strconv.Quote(started)+"\nexec sleep 60\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	engine, err := newSystemTTSEngine(script, "", 0)
+	engine, err := newSystemTTSEngine(script, "", 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

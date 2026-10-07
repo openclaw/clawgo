@@ -63,7 +63,6 @@ func TestConnectBridgeCancellationClosesConnection(t *testing.T) {
 func testBridgeClient() *BridgeClient {
 	return &BridgeClient{
 		logf:   func(string, ...any) {},
-		errs:   make(chan error),
 		frames: make(chan map[string]any),
 	}
 }
