@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Build with Go 1.27.3 to include the GO-2026-6809 crypto/x509 security fix while retaining the Go 1.26 minimum.
 - Update networking dependencies and prefer Go 1.27.1 for builds while retaining the Go 1.26 minimum.
 - Fix the FIFO transcript example and list only implemented TTS engines in CLI help and documentation.
 - Add an opt-in `-tts-system-timeout` to recover the speech queue from a hung system TTS child while preserving unlimited playback by default. Thanks @SebTardif! (#10)
